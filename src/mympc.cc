@@ -28,7 +28,7 @@ namespace mympc {
   {
     std::cout<<"reading parameter"<<std::endl;
 
-    std::string nodename = "/controller_node";
+    std::string nodename = "/scout/controller_node";
     std::vector<double> drag_coefficients;
     std::vector<double> r_command;
     double q_position_x,q_position_y,q_position_z;
@@ -189,6 +189,19 @@ namespace mympc {
     return true;
   }
 
+/*
+  void ModelPredictiveController::setsetVelocity(const double velocity)
+  {
+    for (size_t i = 0; i < ACADO_N; ++i) {
+      acadoVariables.lbValues[3 * i] = -roll_limit_ / 180 * M_PI;       // min roll
+      acadoVariables.lbValues[3 * i + 1] = -pitch_limit_ / 180 * M_PI;  // min pitch
+      acadoVariables.lbValues[3 * i + 2] = thrust_min_;    // min thrust
+      acadoVariables.ubValues[3 * i] = roll_limit_ / 180 * M_PI;        // max roll
+      acadoVariables.ubValues[3 * i + 1] = pitch_limit_ / 180 * M_PI;   // max pitch
+      acadoVariables.ubValues[3 * i + 2] = thrust_max_;    // max thrust
+    }
+  }
+*/
   void ModelPredictiveController::setGoal(const geometry_msgs::PoseStamped& pose)
   {
     position_ref_(0) = pose.pose.position.x;
