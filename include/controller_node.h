@@ -9,7 +9,7 @@
 #include "mavros_msgs/AttitudeTarget.h"
 #include "geometry_msgs/PoseStamped.h"
 
-#include <mav_msgs/RollPitchYawrateThrust.h>
+//#include <mav_msgs/RollPitchYawrateThrust.h>
 // #include <mav_msgs/RollPitchYawrateThrust.h>
 class ControllerNode
 {
