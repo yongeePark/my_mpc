@@ -1,0 +1,10 @@
+<launch>
+  <arg name="mav_name" default="firefly" />
+  <!-- <arg name="namespace" default=""/>-->
+  <!-- <group ns="arg $(namespace)"> -->
+    <node name="controller_node" pkg="my_mpc" type="controller_node" respawn="true" clear_params="true" output="screen">
+      <rosparam file="$(find my_mpc)/config/test.yaml" />
+    </node>
+  <!-- </group> -->
+
+</launch>
