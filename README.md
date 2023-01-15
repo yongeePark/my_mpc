@@ -1,6 +1,6 @@
 # my_mpc
-This is nonlinear mpc for mav.
-It is based on the ROS system(Ubuntu 18.04 and ROS melodic).
+This is nonlinear mpc for mav.<br/><br/>
+It is based on the ROS system(Ubuntu 18.04 and ROS melodic).<br/><br/>
 
 ## how to use
 ```
