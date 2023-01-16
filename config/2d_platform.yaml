@@ -23,6 +23,6 @@ roll_limit : 20
 pitch_limit : 20
 yaw_rate_limit : 15
 thrust_min : 15
-thrust_max : 30
+thrust_max : 25
 
 k_yaw : 0.5

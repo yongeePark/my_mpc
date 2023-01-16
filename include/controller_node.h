@@ -179,11 +179,11 @@ void ControllerNode::PublishCommand()
 
 
     // double throttle = (*ref_attitude_thrust)[3] * a + b;
-    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * 0.707; // 2d_platform
+    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * 0.520; // 2d_platform
     // double throttle = (*ref_attitude_thrust)[3] / 2.30 / 9.8 * 0.66; // gazebo
     
-    if (throttle >= 0.80)
-    {throttle = 0.80;}
+    if (throttle >= 0.75)
+    {throttle = 0.75;}
     
     attitude_target.thrust = (throttle);
     
