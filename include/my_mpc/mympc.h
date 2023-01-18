@@ -12,7 +12,10 @@
 #include <lapacke.h>
 
 #include <nav_msgs/Odometry.h>
+#include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <tf/transform_datatypes.h>
 
 #include <visualization_msgs/Marker.h>
@@ -63,10 +66,14 @@ public:
   void initializeAcadoSolver(Eigen::VectorXd x0);
 
   void setOdometry(const nav_msgs::Odometry& odometry);
+  void setState(bool is_armed, bool is_offboard);
   void setGoal(const geometry_msgs::PoseStamped& pose);
+  void setTrajectory(const trajectory_msgs::MultiDOFJointTrajectory& trajectory);
+  void setPointsFromTrajectory();
 
   void calculateRollPitchYawrateThrustCommand(Eigen::Vector4d* ref_attitude_thrust);
   void getPredictedState(visualization_msgs::Marker& marker);
+  
 
   
 private:
@@ -111,6 +118,8 @@ private:
   //Vector3dDeque position_ref_, velocity_ref_, acceleration_ref_;
   Eigen::Vector3d position_ref_, velocity_ref_;
   double yaw_ref_;
+  trajectory_msgs::MultiDOFJointTrajectory trajectory_ref_;
+  int trajectory_ref_index_;
   // odometry
   // most recent odometry information
   nav_msgs::Odometry odometry_;
@@ -118,6 +127,9 @@ private:
   double k_yaw_;
 
   bool received_first_odometry_;
+  bool received_trajectory_;
+  bool finished_trajectory_;
+  bool is_ready_;
 
   
 };

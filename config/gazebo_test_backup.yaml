@@ -6,24 +6,24 @@ pitch_gain          : 0.78
 
 drag_coefficients : [0.01, 0.01, 0]
 
-q_position_x : 50
-q_position_y : 50
-q_position_z : 80
+q_position_x : 80
+q_position_y : 80
+q_position_z : 60
 
-q_velocity_x : 20
-q_velocity_y : 20
+q_velocity_x : 40
+q_velocity_y : 40
 q_velocity_z : 30
 
-q_attitude_pos : 150
-q_attitude_vel : 100
+q_attitude_pos : 5
+q_attitude_vel : 10
 
 r_command : [150, 150, 1]
 
-roll_limit : 40
-pitch_limit : 40
+roll_limit : 20
+pitch_limit : 20
 yaw_rate_limit : 5
 thrust_min : 5
-thrust_max : 20
+thrust_max : 40
 
 k_yaw : 0.5
 

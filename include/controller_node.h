@@ -7,7 +7,10 @@
 #include <controller_node.h>
 #include <my_mpc/mympc.h>
 #include "mavros_msgs/AttitudeTarget.h"
+#include "mavros_msgs/State.h"
 #include "geometry_msgs/PoseStamped.h"
+#include "trajectory_msgs/MultiDOFJointTrajectory.h"
+#include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 
 #include <mav_msgs/RollPitchYawrateThrust.h>
 // #include <mav_msgs/RollPitchYawrateThrust.h>
@@ -16,7 +19,7 @@ class ControllerNode
 public:
     // Constructor
     ControllerNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_param)
-    :nh_(nh), nh_param_(nh_param)
+    :nh_(nh), nh_param_(nh_param), is_armed_(false), is_offboard_(false)
     {
         std::cout<<"[controller_node.h] : Running controller node!"<<std::endl;
         pub_              = nh_.advertise<mavros_msgs::AttitudeTarget>("/scout/mavros/setpoint_raw/attitude", 100);
@@ -25,10 +28,12 @@ public:
 
         //        pub_debug_ = nh_.advertise<mav_msgs::RollPitchYawrateThrust>("/firefly/command/roll_pitch_yawrate_thrust",100);
 
-        sub_              = nh_.subscribe("/scout/mavros/local_position/odom", 100, &ControllerNode::OdometryCallback, this);
+        sub_odom_         = nh_.subscribe("/scout/mavros/local_position/odom", 100, &ControllerNode::OdometryCallback, this);
+        sub_state_        = nh_.subscribe("/scout/mavros/state", 1, &ControllerNode::StateCallback, this); // to control OFFBOARD and ARMING
         sub_goal_         = nh_.subscribe("/scout/goal_pose", 1, &ControllerNode::GoalCallbackByPoseStamped, this);
         sub_goal_mission_ = nh_.subscribe("/scout/goal_mission", 1, &ControllerNode::GoalCallbackByMission, this); // this is for debug
         sub_goalaction_   = nh_.subscribe("/scout/GoalAction",1,&ControllerNode::GoalActionCallback,this); //this is for connection with mission_planner
+        sub_trajectory_   = nh_.subscribe("/scout/planning/trajectory",1,&ControllerNode::GoalCallbackByTrajectory,this); // trajectory
         
         // sub_ = nh_.subscribe("/firefly/ground_truth/odometry", 100, &ControllerNode::OdometryCallback, this);
 
@@ -43,12 +48,24 @@ public:
         attitude_target.orientation.w = 1;
 
         attitude_target.thrust = 0;
+
+        if (!nh_param_.getParam("/scout/controller_node/thrust_to_throttle",thrust_to_throttle_))
+        {
+            std::cout<<"[Error] Please set [k_yaw] parameter"<<std::endl;
+            thrust_to_throttle_ = 0.1;
+        }
         
     }
     // Odometry Callback
     void OdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void GoalCallbackByPoseStamped(const geometry_msgs::PoseStamped::ConstPtr& msg);
+    void StateCallback(const mavros_msgs::State::ConstPtr& msg);
+    
+    void GoalCallbackByTrajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr& msg);
+    // NEVER USE THESE TWO WHILE DOING REAL DRONE TEST!
+    // IT WILL MAKE THE DRONE MOVE AT ITS MAXIMUM SPEED
     void GoalCallbackByMission(const std_msgs::Float32MultiArray& msg);
+    void GoalCallbackByPoseStamped(const geometry_msgs::PoseStamped::ConstPtr& msg);
+
     void PublishCommand();
     void GoalActionCallback(const std_msgs::Float32MultiArray& goalaciton);
 
@@ -59,18 +76,32 @@ private:
     ros::Publisher  pub_debug_;
     ros::Publisher  pub_marker_;
     ros::Publisher  pub_direction_;
-    ros::Subscriber sub_;
+    ros::Subscriber sub_odom_;
+    ros::Subscriber sub_state_;
     ros::Subscriber sub_goal_;
     ros::Subscriber sub_goal_mission_;
     ros::Subscriber sub_goalaction_;
+    ros::Subscriber sub_trajectory_;
     mympc::ModelPredictiveController* controller_;
 
     //command
     Eigen::Vector4d* ref_attitude_thrust = new Eigen::Vector4d;
     mavros_msgs::AttitudeTarget attitude_target;
+
+    double thrust_to_throttle_;
+    bool is_armed_;
+    bool is_offboard_;
+    
 };
 
 
+void ControllerNode::StateCallback(const mavros_msgs::State::ConstPtr& msg)
+{
+    if (msg->armed == true){is_armed_ = true;}
+    else{is_armed_ = false;}
+    if (msg->mode == "OFFBOARD"){is_offboard_ = true;}
+    else{is_offboard_ = false; }
+}
 void ControllerNode::GoalActionCallback(const std_msgs::Float32MultiArray& goalaction)
 {
     double goal_x   = goalaction.data[1];
@@ -128,6 +159,12 @@ void ControllerNode::GoalCallbackByMission(const std_msgs::Float32MultiArray& ms
     controller_->setGoal(goal);
     // PublishCommand();
 }
+void ControllerNode::GoalCallbackByTrajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr& msg)
+{
+    // std::cout<<"[controller_node.h] : run goal callback!"<<std::endl;
+    controller_->setTrajectory(*msg);
+    // PublishCommand();
+}
 void ControllerNode::GoalCallbackByPoseStamped(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     // std::cout<<"[controller_node.h] : run goal callback!"<<std::endl;
@@ -138,6 +175,7 @@ void ControllerNode::OdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
     // std::cout<<"[controller_node.h] : run odometry callback!"<<std::endl;
     controller_->setOdometry(*msg);
+    controller_->setState(is_armed_,is_offboard_);
     PublishCommand();
 }
 
@@ -177,9 +215,14 @@ void ControllerNode::PublishCommand()
     attitude_target.body_rate.y = 0;
     attitude_target.body_rate.z = 0;
 
-
-    // double throttle = (*ref_attitude_thrust)[3] * a + b;
-    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * 0.707; // 2d_platform
+    // y : Thrust, x : throttle
+    // y = ax^2
+    // x = sqrt(y / a)
+    // 9.8 * 1.5 = a * (0.707)^2
+    // a = 9.8 * 1.5 / 0.707^2
+    double coefficient = 9.8 * 1.5 / pow(thrust_to_throttle_,2);
+    // double throttle = sqrt((*ref_attitude_thrust)[3] / coefficient);
+    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * thrust_to_throttle_; // 2d_platform
     // double throttle = (*ref_attitude_thrust)[3] / 2.30 / 9.8 * 0.66; // gazebo
     
     if (throttle >= 0.80)
