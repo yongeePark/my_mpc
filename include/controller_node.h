@@ -215,7 +215,6 @@ void ControllerNode::PublishCommand()
     attitude_target.body_rate.y = 0;
     attitude_target.body_rate.z = 0;
 
-<<<<<<< HEAD
     // y : Thrust, x : throttle
     // y = ax^2
     // x = sqrt(y / a)
@@ -224,11 +223,6 @@ void ControllerNode::PublishCommand()
     double coefficient = 9.8 * 1.5 / pow(thrust_to_throttle_,2);
     // double throttle = sqrt((*ref_attitude_thrust)[3] / coefficient);
     double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * thrust_to_throttle_; // 2d_platform
-=======
-
-    // double throttle = (*ref_attitude_thrust)[3] * a + b;
-    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * 0.520; // 2d_platform
->>>>>>> 332c467211112905449922d052ca57ba950741ce
     // double throttle = (*ref_attitude_thrust)[3] / 2.30 / 9.8 * 0.66; // gazebo
     
     if (throttle >= 0.75)

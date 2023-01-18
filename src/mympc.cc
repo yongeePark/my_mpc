@@ -403,12 +403,12 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
       {      
         if(implement_count < 2)
         {
-          trajectory_ref_index_ = trajectory_ref_index_ + 3;
+          trajectory_ref_index_ = trajectory_ref_index_ + 5;
           implement_count++;
         } 
         else
         {
-          trajectory_ref_index_ = trajectory_ref_index_ + 4;
+          trajectory_ref_index_ = trajectory_ref_index_ + 5;
           implement_count = 0;
         }
 
@@ -478,6 +478,7 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
   {
     if(is_armed && is_offboard)
     { is_ready_ = true;}
+    
   }
 
 
@@ -508,19 +509,21 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
   Eigen::Matrix<double, ACADO_NX, 1> x_0;
   Eigen::Vector3d current_rpy;
 
+  
+  // this is for temp test
   /*
-
   for (size_t i = 0; i < ACADO_N; i++) {
 
-    reference_.block(i, 0, 1, ACADO_NY) << position_ref_[0], position_ref_[1], position_ref_[2],
-                                           velocity_ref_[0], velocity_ref_[1], velocity_ref_[2],
+    reference_.block(i, 0, 1, ACADO_NY) << 0,0,1,
+                                           0,0,0,
                                            0, 0, 0, 0, 0;
   }
 
-  referenceN_ << position_ref_[0], position_ref_[1], position_ref_[2],
-                 velocity_ref_[0], velocity_ref_[1], velocity_ref_[2];
-
-  */
+  referenceN_ << 0,0,1,
+                 0,0,0;
+*/  
+  // temp end
+  
 
   //acado_online_data_.block(ACADO_N, ACADO_NOD - 3, 1, 3) << estimated_disturbances.transpose();
 
@@ -688,7 +691,7 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
     // "yaw_error : "<<yaw_diff * 180 / M_PI<<std::endl<<
     // "yaw_cmd : "<<yaw_cmd * 180 / M_PI<<std::endl;
     // std::cout<<"Current pose : ["<<odometry_.pose.pose.position.x<<", "<<odometry_.pose.pose.position.y<<", "<<odometry_.pose.pose.position.z<<"]"<<std::endl;
-    // std::cout<<"Current goal : ["<<position_ref_[0]<<", "<<position_ref_[1]<<", "<<position_ref_[2]<<"]"<<std::endl;
+    std::cout<<"Current goal : ["<<position_ref_[0]<<", "<<position_ref_[1]<<", "<<position_ref_[2]<<"]"<<std::endl;
     
     counter = 0;
   }
