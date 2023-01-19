@@ -16,7 +16,7 @@ namespace mympc {
     referenceN_.setZero();
     
     // initial goal is O
-    position_ref_ << 0.0, 0.0, 1.0;
+    position_ref_ << 0.0, 0.0, 0.0;
     velocity_ref_ << 0.0, 0.0, 0.0;
 
     initialized_parameters_ = setControllerParameters();
@@ -189,6 +189,15 @@ namespace mympc {
       acadoVariables.ubValues[3 * i + 1] = pitch_limit_ / 180 * M_PI;   // max pitch
       acadoVariables.ubValues[3 * i + 2] = thrust_max_;    // max thrust
     }   
+    for (size_t i = 0; i < ACADO_N; i++) {
+
+    reference_.block(i, 0, 1, ACADO_NY) << 0,0,0,
+                                           0,0,0,
+                                           0, 0, 0, 0, 0;
+  }
+
+  referenceN_ << 0,0,0,
+                 0,0,0;
     return true;
   }
 
@@ -222,6 +231,7 @@ namespace mympc {
 
   void ModelPredictiveController::setTrajectory(const trajectory_msgs::MultiDOFJointTrajectory& trajectory)
   {   
+    std::cout<<"set trajectory function"<<std::endl;
     // if( (!received_trajectory_ || finished_trajectory_) && is_ready_)
     if( is_ready_)
     {
@@ -512,17 +522,17 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
 
   
   // this is for temp test
-  /*
+  
   for (size_t i = 0; i < ACADO_N; i++) {
 
-    reference_.block(i, 0, 1, ACADO_NY) << 0,0,1,
+    reference_.block(i, 0, 1, ACADO_NY) << 0,0,0,
                                            0,0,0,
                                            0, 0, 0, 0, 0;
   }
 
-  referenceN_ << 0,0,1,
+  referenceN_ << 0,0,0,
                  0,0,0;
-*/  
+  
   // temp end
   
 

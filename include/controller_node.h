@@ -19,7 +19,7 @@ class ControllerNode
 public:
     // Constructor
     ControllerNode(const ros::NodeHandle& nh, const ros::NodeHandle& nh_param)
-    :nh_(nh), nh_param_(nh_param), is_armed_(false), is_offboard_(false)
+    :nh_(nh), nh_param_(nh_param), is_armed_(false), is_offboard_(false), set_mass_(false)
     {
         std::cout<<"[controller_node.h] : Running controller node!"<<std::endl;
         pub_              = nh_.advertise<mavros_msgs::AttitudeTarget>("/scout/mavros/setpoint_raw/attitude", 100);
@@ -53,6 +53,13 @@ public:
         {
             std::cout<<"[Error] Please set [k_yaw] parameter"<<std::endl;
             thrust_to_throttle_ = 0.1;
+        }
+
+        set_mass_ = nh_param_.getParam("/scout/controller_node/mass",mass_);
+        if (set_mass_ == false)
+        {
+            std::cout<<"[Error] Please set [mass] parameter"<<std::endl;
+	    mass_ = 10000;// to make the drone can't fly!
         }
         
     }
@@ -89,8 +96,11 @@ private:
     mavros_msgs::AttitudeTarget attitude_target;
 
     double thrust_to_throttle_;
+    double mass_;
     bool is_armed_;
     bool is_offboard_;
+    //dangerous check
+    bool set_mass_;
     
 };
 
@@ -222,17 +232,18 @@ void ControllerNode::PublishCommand()
     // a = 9.8 * 1.5 / 0.707^2
     double coefficient = 9.8 * 1.5 / pow(thrust_to_throttle_,2);
     // double throttle = sqrt((*ref_attitude_thrust)[3] / coefficient);
-    double throttle = (*ref_attitude_thrust)[3] / 1.50 / 9.8 * thrust_to_throttle_; // 2d_platform
+    double throttle = (*ref_attitude_thrust)[3] / mass_ / 9.8 * thrust_to_throttle_; // 2d_platform
     // double throttle = (*ref_attitude_thrust)[3] / 2.30 / 9.8 * 0.66; // gazebo
     
-    if (throttle >= 0.75)
-    {throttle = 0.75;}
+    if (throttle >= 0.55)
+    {throttle = 0.55;}
     
-    attitude_target.thrust = (throttle);
+    attitude_target.thrust = throttle;
     
 
     // PUBLISH!!!
-    pub_.publish(attitude_target);
+    if(set_mass_)
+    {pub_.publish(attitude_target);}
     
 
     // pose debug
