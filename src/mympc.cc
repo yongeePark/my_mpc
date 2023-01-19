@@ -257,19 +257,19 @@ namespace mympc {
     // set reference matrices
     for (size_t i = 0; i < ACADO_N; i++) {
       // std::cout<<"current index : "<<trajectory_ref_index_ + 10*i <<std::endl;
-      if (trajectory_ref_index_ + 10*i < traj_size)
+      if (trajectory_ref_index_ + 10*(i+2) < traj_size)
       {
         
-        reference_pose_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).transforms.at(0).translation.x;
-        reference_pose_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).transforms.at(0).translation.y;
-        reference_pose_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).transforms.at(0).translation.z;
+        reference_pose_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.x;
+        reference_pose_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.y;
+        reference_pose_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.z;
 
-        reference_velocity_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).velocities.at(0).linear.x;
-        reference_velocity_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).velocities.at(0).linear.y;
-        reference_velocity_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).velocities.at(0).linear.z;
+        reference_velocity_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.x;
+        reference_velocity_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.y;
+        reference_velocity_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.z;
 
-        reference_acceleration_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).accelerations.at(0).linear.x;
-        reference_acceleration_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).accelerations.at(0).linear.y;
+        reference_acceleration_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).accelerations.at(0).linear.x;
+        reference_acceleration_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).accelerations.at(0).linear.y;
         //reference_acceleration_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).accelerations.at(0).linear.z;
       }
       else
@@ -305,10 +305,10 @@ namespace mympc {
       // std::cout<<"x : "<<reference_pose_x<<", y : "<<reference_pose_y<<", z : "<<reference_pose_z<<std::endl;
       // std::cout<<"vx : "<<reference_velocity_x<<", vy : "<<reference_velocity_y<<", vz : "<<reference_velocity_z<<std::endl;
     
-    // if (10*ACADO_N < traj_size - trajectory_ref_index_)
-    // { last_point_index = 10*ACADO_N; }
-    // else
-    // { last_point_index = traj_size-1 ;}
+    if (trajectory_ref_index_ + 10*ACADO_N < traj_size - 1)
+    { last_point_index = trajectory_ref_index_ + 10*ACADO_N; }
+    else
+    { last_point_index = traj_size-1 ;}
     last_point_index = traj_size-1 ;
     last_pose_x = trajectory_ref_.points.at(last_point_index).transforms.at(0).translation.x;
     last_pose_y = trajectory_ref_.points.at(last_point_index).transforms.at(0).translation.y;
@@ -320,11 +320,12 @@ namespace mympc {
     referenceN_ << last_pose_x,last_pose_y,last_pose_z,
                     last_velocity_x,last_velocity_y,last_velocity_z;
 
+    int direction_point_index = traj_size -1;
     Eigen::Quaterniond q;
-    q.x() = trajectory_ref_.points.at(last_point_index).transforms.at(0).rotation.x;
-    q.y() = trajectory_ref_.points.at(last_point_index).transforms.at(0).rotation.y;
-    q.z() = trajectory_ref_.points.at(last_point_index).transforms.at(0).rotation.z;
-    q.w() = trajectory_ref_.points.at(last_point_index).transforms.at(0).rotation.w;
+    q.x() = trajectory_ref_.points.at(direction_point_index).transforms.at(0).rotation.x;
+    q.y() = trajectory_ref_.points.at(direction_point_index).transforms.at(0).rotation.y;
+    q.z() = trajectory_ref_.points.at(direction_point_index).transforms.at(0).rotation.z;
+    q.w() = trajectory_ref_.points.at(direction_point_index).transforms.at(0).rotation.w;
 
     yaw_ref_ = std::atan2(2.0 * ( q.w() * q.z() + q.x() * q.y()),
       1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()) );

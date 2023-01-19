@@ -8,16 +8,16 @@ drag_coefficients : [0.03, 0.03, 0]
 
 q_position_x : 80
 q_position_y : 80
-q_position_z : 120
+q_position_z : 80
 
 q_velocity_x : 30
 q_velocity_y : 30
 q_velocity_z : 40
 
-q_attitude_pos : 10
+q_attitude_pos : 30
 q_attitude_vel : 10
 
-r_command : [60, 60, 1]
+r_command : [120, 120, 1]
 
 roll_limit : 30
 pitch_limit : 30
