@@ -180,7 +180,6 @@ namespace mympc {
     Eigen::Map<Eigen::Matrix<double, ACADO_NYN, ACADO_NYN>>(const_cast<double*>(acadoVariables.WN)) =
       WN_.transpose();
 
-
     for (size_t i = 0; i < ACADO_N; ++i) {
       acadoVariables.lbValues[3 * i] = -roll_limit_ / 180 * M_PI;       // min roll
       acadoVariables.lbValues[3 * i + 1] = -pitch_limit_ / 180 * M_PI;  // min pitch
@@ -189,15 +188,6 @@ namespace mympc {
       acadoVariables.ubValues[3 * i + 1] = pitch_limit_ / 180 * M_PI;   // max pitch
       acadoVariables.ubValues[3 * i + 2] = thrust_max_;    // max thrust
     }   
-    for (size_t i = 0; i < ACADO_N; i++) {
-
-    reference_.block(i, 0, 1, ACADO_NY) << 0,0,0,
-                                           0,0,0,
-                                           0, 0, 0, 0, 0;
-  }
-
-  referenceN_ << 0,0,0,
-                 0,0,0;
     return true;
   }
 
@@ -232,12 +222,8 @@ namespace mympc {
   void ModelPredictiveController::setTrajectory(const trajectory_msgs::MultiDOFJointTrajectory& trajectory)
   {   
     std::cout<<"set trajectory function"<<std::endl;
-    // if( (!received_trajectory_ || finished_trajectory_) && is_ready_)
     if( is_ready_)
     {
-      std::cout<<"c=========CHECK========="<<std::endl;
-      std::cout<<"received_trajectory_ : "<<received_trajectory_
-               <<"finished_trajectory_ : "<<finished_trajectory_<<std::endl;
       received_trajectory_ = true; // check first trajectory
       finished_trajectory_ = false;
       trajectory_ref_ = trajectory;
@@ -262,42 +248,27 @@ namespace mympc {
     double last_velocity_x,last_velocity_y,last_velocity_z;
 
 
-
+    int path_index = 0;
 
     // set reference matrices
     for (size_t i = 0; i < ACADO_N; i++) {
       // std::cout<<"current index : "<<trajectory_ref_index_ + 10*i <<std::endl;
       if (trajectory_ref_index_ + 10*(i+2) < traj_size)
-      {
-        
-        reference_pose_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.x;
-        reference_pose_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.y;
-        reference_pose_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).transforms.at(0).translation.z;
-
-        reference_velocity_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.x;
-        reference_velocity_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.y;
-        reference_velocity_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).velocities.at(0).linear.z;
-
-        reference_acceleration_x = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).accelerations.at(0).linear.x;
-        reference_acceleration_y = trajectory_ref_.points.at(trajectory_ref_index_ + 10*(i+2)).accelerations.at(0).linear.y;
-        //reference_acceleration_z = trajectory_ref_.points.at(trajectory_ref_index_ + 10*i).accelerations.at(0).linear.z;
-      }
+      {path_index = trajectory_ref_index_ + 10*(i+2);}
       else
-      {
-        reference_pose_x = trajectory_ref_.points.at(traj_size - 1).transforms.at(0).translation.x;
-        reference_pose_y = trajectory_ref_.points.at(traj_size - 1).transforms.at(0).translation.y;
-        reference_pose_z = trajectory_ref_.points.at(traj_size - 1).transforms.at(0).translation.z;
+      {path_index = traj_size - 1;}
 
-        reference_velocity_x = trajectory_ref_.points.at(traj_size -1).velocities.at(0).linear.x;
-        reference_velocity_y = trajectory_ref_.points.at(traj_size -1).velocities.at(0).linear.y;
-        reference_velocity_z = trajectory_ref_.points.at(traj_size -1).velocities.at(0).linear.z;
+      reference_pose_x = trajectory_ref_.points.at(path_index).transforms.at(0).translation.x;
+      reference_pose_y = trajectory_ref_.points.at(path_index).transforms.at(0).translation.y;
+      reference_pose_z = trajectory_ref_.points.at(path_index).transforms.at(0).translation.z;
 
-        reference_acceleration_x = trajectory_ref_.points.at(traj_size -1).accelerations.at(0).linear.x;
-        reference_acceleration_y = trajectory_ref_.points.at(traj_size -1).accelerations.at(0).linear.y;
-        //reference_acceleration_z = trajectory_ref_.points.at(traj_size -1).accelerations.at(0).linear.z;
-      }
-      // Eigen::Vector3d acceleration_ref_B()
-      // Eigen::Vector2d feed_forward(
+      reference_velocity_x = trajectory_ref_.points.at(path_index).velocities.at(0).linear.x;
+      reference_velocity_y = trajectory_ref_.points.at(path_index).velocities.at(0).linear.y;
+      reference_velocity_z = trajectory_ref_.points.at(path_index).velocities.at(0).linear.z;
+
+      reference_acceleration_x = trajectory_ref_.points.at(path_index).accelerations.at(0).linear.x;
+      reference_acceleration_y = trajectory_ref_.points.at(path_index).accelerations.at(0).linear.y;
+
       
       reference_.block(i, 0, 1, ACADO_NY) << reference_pose_x,reference_pose_y,reference_pose_z,
                                           reference_velocity_x,reference_velocity_y,reference_velocity_z,
@@ -425,7 +396,6 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
 
         if (trajectory_ref_index_ > traj_size -1)
         {
-          // finished_trajectory_ = true;
           trajectory_ref_index_ = traj_size -1;
         }
       }
@@ -453,6 +423,7 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
       setPointsFromTrajectory();
     }
     
+    // this is for first odom
     if (!received_first_odometry_) {
       Eigen::VectorXd x0(ACADO_NX);
       received_first_odometry_ = true;
@@ -518,25 +489,6 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
     assert(initialized_parameters_ == true);
   
   Eigen::Matrix<double, ACADO_NX, 1> x_0;
-  Eigen::Vector3d current_rpy;
-
-  
-  // this is for temp test
-  
-  for (size_t i = 0; i < ACADO_N; i++) {
-
-    reference_.block(i, 0, 1, ACADO_NY) << 0,0,0,
-                                           0,0,0,
-                                           0, 0, 0, 0, 0;
-  }
-
-  referenceN_ << 0,0,0,
-                 0,0,0;
-  
-  // temp end
-  
-
-  //acado_online_data_.block(ACADO_N, ACADO_NOD - 3, 1, 3) << estimated_disturbances.transpose();
 
   Eigen::Vector3d euler_angles;
   Eigen::Quaterniond q;
@@ -554,21 +506,6 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
       std::asin(2.0 * (q.w() * q.y() - q.z() * q.x())),
       std::atan2(2.0 * (q.w() * q.z() + q.x() * q.y()),
             1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()));
-
-  // Eigen::Vector3d euler_angles;
-  // Eigen::Quaterniond q;
-  // q.x() = odometry.pose.pose.orientation.x;
-  // q.y() = odometry.pose.pose.orientation.y;
-  // q.z() = odometry.pose.pose.orientation.z;
-  // q.w() = odometry.pose.pose.orientation.w;
-
-  // euler_angles = q.toRotationMatrix().eulerAngles(0,1,2);
-
-
-  // std::cout<<"current position"<<std::endl;
-  // std::cout<<odometry_.pose.pose.position.x<<", "<<odometry_.pose.pose.position.y<<", "<<odometry_.pose.pose.position.z<<std::endl;
-  // std::cout<<"euler_angles"<<std::endl;
-  // std::cout<<euler_angles(0)<<", "<<euler_angles(1)<<", "<<euler_angles(2) <<std::endl;
 
   adjust_angle(euler_angles(0),M_PI);
   adjust_angle(euler_angles(1),M_PI);
@@ -603,28 +540,15 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
       acado_online_data_.transpose();
 
   // Solve
+  // Calculate the Optimization Problem!
   ros::Time time_start = ros::Time::now();
-
-  // ros::WallTime time_before_solving = ros::WallTime::now();
   acado_preparationStep();
-
   int acado_status = acado_feedbackStep();
   ros::Time time_end = ros::Time::now();
-
 
   double roll_ref = acadoVariables.u[0];
   double pitch_ref = acadoVariables.u[1];
   double thrust_ref = acadoVariables.u[2];
-
-  // std::cout<<"========================================"<<std::endl;
-  // std::cout<<"roll ref : "<<roll_ref<<std::endl<<
-  //            "pitch ref : "<<pitch_ref<<std::endl;
-
-  // std::cout<<"optimization result"<<std::endl;
-  // std::cout<<"Roll   : "<<roll_ref<<
-  //            "Pitch  : "<<pitch_ref<<
-  //            "Thrust : "<<thrust_ref<<std::endl;
-  
 
   if (std::isnan(roll_ref) || std::isnan(pitch_ref) || std::isnan(thrust_ref)
       || acado_status != 0) {
@@ -635,10 +559,7 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
     return;
   }
 
-  // command_roll_pitch_yaw_thrust_ << roll_ref, pitch_ref, yaw_ref_.front(), thrust_ref;
-
-  state_ = Eigen::Map<Eigen::Matrix<double, ACADO_N + 1, ACADO_NX, Eigen::RowMajor>>(
-      acadoVariables.x);
+  state_ = Eigen::Map<Eigen::Matrix<double, ACADO_N + 1, ACADO_NX, Eigen::RowMajor>>(acadoVariables.x);
 
   // yaw controller
   double yaw_error = yaw_ref_ - current_yaw_;
@@ -662,18 +583,16 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
   pitch_ref_rot = -sin(yaw_cmd)*roll_ref + cos(yaw_cmd) * pitch_ref;
 
   // *ref_attitude_thrust = Eigen::Vector4d(roll_ref_rot, pitch_ref_rot, yaw_cmd, mass_ * thrust_ref);
+  // if (received_trajectory_)
+  // {
+  //   *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_cmd, mass_ * thrust_ref);
+  // }
+  // else
+  // { *ref_attitude_thrust = Eigen::Vector4d(0,0,0,0); }
   *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_cmd, mass_ * thrust_ref);
-
 
   static int counter = 0;
   if (counter >= 10) {
-    // ROS_INFO_STREAM("average solve time: " << solve_time_average_ / counter << " ms");
-    // solve_time_average_ = 0.0;
-
-    // ROS_INFO_STREAM("Controller loop time : " << diff_time*1000.0 << " ms");
-
-    // ROS_INFO_STREAM(
-        // "roll ref: " << command_roll_pitch_yaw_thrust_(0) << "\t" << "pitch ref : \t" << command_roll_pitch_yaw_thrust_(1) << "\t" << "yaw ref : \t" << command_roll_pitch_yaw_thrust_(2) << "\t" << "thrust ref : \t" << command_roll_pitch_yaw_thrust_(3) << "\t" << "yawrate ref : \t" << yaw_rate_cmd);
     std::cout<<"============================================"<<std::endl;
     std::cout<<"[mympc.cc] reference info"<<std::endl;
     std::cout<<"acado solver status : " << acado_status<<std::endl;
@@ -711,15 +630,26 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
 
 void ModelPredictiveController::getPredictedState(visualization_msgs::Marker& marker)
 {
+
+  
   for (uint32_t i = 0; i < ACADO_N+1; ++i)
   {
     geometry_msgs::Point p;
-    p.x = state_(i,6);
-    p.y = state_(i,7);
-    p.z = state_(i,8);
+    // if(received_trajectory_)
+    if(true)
+    {
+      p.x = state_(i,6);
+      p.y = state_(i,7);
+      p.z = state_(i,8);
+    }
+    else
+    {
+      p.x = 0;
+      p.y = 0;
+      p.z = 0;
+    }
 
     marker.points.push_back(p);
-
   }
  // pub_marker_.publish(marker);
 }

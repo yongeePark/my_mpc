@@ -74,13 +74,10 @@ public:
   void calculateRollPitchYawrateThrustCommand(Eigen::Vector4d* ref_attitude_thrust);
   void getPredictedState(visualization_msgs::Marker& marker);
   
-
-  
 private:
   ros::NodeHandle nh_;
   ros::NodeHandle nh_param_;
 
-  //
   static constexpr double kGravity = 9.8066;
 
   bool initialized_parameters_;
@@ -114,14 +111,11 @@ private:
   Eigen::Matrix<double, 1, ACADO_NYN> referenceN_;
   Eigen::Matrix<double, ACADO_N + 1, ACADO_NOD> acado_online_data_;
 
-
-  //Vector3dDeque position_ref_, velocity_ref_, acceleration_ref_;
   Eigen::Vector3d position_ref_, velocity_ref_;
   double yaw_ref_;
   trajectory_msgs::MultiDOFJointTrajectory trajectory_ref_;
   int trajectory_ref_index_;
   // odometry
-  // most recent odometry information
   nav_msgs::Odometry odometry_;
   double current_yaw_;
   double k_yaw_;
@@ -130,8 +124,6 @@ private:
   bool received_trajectory_;
   bool finished_trajectory_;
   bool is_ready_;
-
-  
 };
 
 }

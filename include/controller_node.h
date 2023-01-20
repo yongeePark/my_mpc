@@ -4,7 +4,6 @@
 #include "std_msgs/String.h"
 #include "std_msgs/Float32MultiArray.h"
 #include <iostream>
-#include <controller_node.h>
 #include <my_mpc/mympc.h>
 #include "mavros_msgs/AttitudeTarget.h"
 #include "mavros_msgs/State.h"
@@ -23,10 +22,8 @@ public:
     {
         std::cout<<"[controller_node.h] : Running controller node!"<<std::endl;
         pub_              = nh_.advertise<mavros_msgs::AttitudeTarget>("/scout/mavros/setpoint_raw/attitude", 100);
-        pub_marker_       = nh_.advertise<visualization_msgs::Marker>("/scout/visualization_marker", 10);
+        pub_marker_       = nh_.advertise<visualization_msgs::Marker>("/scout/predicted_traj", 10);
         pub_direction_    = nh_.advertise<geometry_msgs::PoseStamped>("/scout/debug_pose", 10);
-
-        //        pub_debug_ = nh_.advertise<mav_msgs::RollPitchYawrateThrust>("/firefly/command/roll_pitch_yawrate_thrust",100);
 
         sub_odom_         = nh_.subscribe("/scout/mavros/local_position/odom", 100, &ControllerNode::OdometryCallback, this);
         sub_state_        = nh_.subscribe("/scout/mavros/state", 1, &ControllerNode::StateCallback, this); // to control OFFBOARD and ARMING
@@ -35,7 +32,7 @@ public:
         sub_goalaction_   = nh_.subscribe("/scout/GoalAction",1,&ControllerNode::GoalActionCallback,this); //this is for connection with mission_planner
         sub_trajectory_   = nh_.subscribe("/scout/planning/trajectory",1,&ControllerNode::GoalCallbackByTrajectory,this); // trajectory
         
-        // sub_ = nh_.subscribe("/firefly/ground_truth/odometry", 100, &ControllerNode::OdometryCallback, this);
+  
 
         controller_ = new mympc::ModelPredictiveController(nh, nh_param);
         
@@ -59,14 +56,19 @@ public:
         if (set_mass_ == false)
         {
             std::cout<<"[Error] Please set [mass] parameter"<<std::endl;
-	    mass_ = 10000;// to make the drone can't fly!
+	        mass_ = 10000;// to make the drone can't fly!
         }
-        
+        if (!nh_param_.getParam("/scout/controller_node/throttle_limit",throttle_limit_))
+        {
+            std::cout<<"[Error] Please set [throttle_limit] parameter"<<std::endl;
+            throttle_limit_ = 0.1;
+        }
     }
-    // Odometry Callback
-    void OdometryCallback(const nav_msgs::Odometry::ConstPtr& msg);
-    void StateCallback(const mavros_msgs::State::ConstPtr& msg);
     
+    void OdometryCallback(const nav_msgs::Odometry::ConstPtr& msg); // Odometry Callback
+    void StateCallback(const mavros_msgs::State::ConstPtr& msg);    // State Callback
+    
+    // It is recommended to use this callback.
     void GoalCallbackByTrajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr& msg);
     // NEVER USE THESE TWO WHILE DOING REAL DRONE TEST!
     // IT WILL MAKE THE DRONE MOVE AT ITS MAXIMUM SPEED
@@ -97,97 +99,13 @@ private:
 
     double thrust_to_throttle_;
     double mass_;
+    double throttle_limit_;
     bool is_armed_;
     bool is_offboard_;
     //dangerous check
     bool set_mass_;
     
 };
-
-
-void ControllerNode::StateCallback(const mavros_msgs::State::ConstPtr& msg)
-{
-    if (msg->armed == true){is_armed_ = true;}
-    else{is_armed_ = false;}
-    if (msg->mode == "OFFBOARD"){is_offboard_ = true;}
-    else{is_offboard_ = false; }
-}
-void ControllerNode::GoalActionCallback(const std_msgs::Float32MultiArray& goalaction)
-{
-    double goal_x   = goalaction.data[1];
-    double goal_y   = goalaction.data[2];
-    double goal_z   = goalaction.data[3];
-    double goal_yaw = goalaction.data[4]; // radian
-
-    geometry_msgs::PoseStamped goal;
-    goal.pose.position.x = goal_x;
-    goal.pose.position.y = goal_y;
-    goal.pose.position.z = goal_z; 
-
-    Eigen::Quaterniond q;
-    q = Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
-      * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())
-      * Eigen::AngleAxisd(goal_yaw, Eigen::Vector3d::UnitZ());
-    
-    goal.pose.orientation.x = q.x();
-    goal.pose.orientation.y = q.y();
-    goal.pose.orientation.z = q.z();
-    goal.pose.orientation.w = q.w();
-
-    controller_->setGoal(goal);
-
-    // TODO:: implement velocity option
-    //controller_->setVelocity(goalaction.data[5]);
-
-}
-void ControllerNode::GoalCallbackByMission(const std_msgs::Float32MultiArray& msg)
-{
-    double goal_x   = msg.data[0];
-    double goal_y   = msg.data[1];
-    double goal_z   = msg.data[2];
-    double goal_yaw = msg.data[3] / 180 * M_PI;
-    geometry_msgs::PoseStamped goal;
-    goal.pose.position.x = goal_x;
-    goal.pose.position.y = goal_y;
-    goal.pose.position.z = goal_z; 
-    
-    Eigen::Quaterniond q;
-    q = Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
-      * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY())
-      * Eigen::AngleAxisd(goal_yaw, Eigen::Vector3d::UnitZ());
-    
-    goal.pose.orientation.x = q.x();
-    goal.pose.orientation.y = q.y();
-    goal.pose.orientation.z = q.z();
-    goal.pose.orientation.w = q.w();
-
-    // std::cout<<
-    // "goal_x : "<<goal_x<<std::endl<<
-    // "goal_y : "<<goal_y<<std::endl<<
-    // "goal_z : "<<goal_z<<std::endl<<
-    // "goal_yaw : "<<goal_yaw<<std::endl;
-    controller_->setGoal(goal);
-    // PublishCommand();
-}
-void ControllerNode::GoalCallbackByTrajectory(const trajectory_msgs::MultiDOFJointTrajectory::ConstPtr& msg)
-{
-    // std::cout<<"[controller_node.h] : run goal callback!"<<std::endl;
-    controller_->setTrajectory(*msg);
-    // PublishCommand();
-}
-void ControllerNode::GoalCallbackByPoseStamped(const geometry_msgs::PoseStamped::ConstPtr& msg)
-{
-    // std::cout<<"[controller_node.h] : run goal callback!"<<std::endl;
-    controller_->setGoal(*msg);
-    // PublishCommand();
-}
-void ControllerNode::OdometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
-{
-    // std::cout<<"[controller_node.h] : run odometry callback!"<<std::endl;
-    controller_->setOdometry(*msg);
-    controller_->setState(is_armed_,is_offboard_);
-    PublishCommand();
-}
 
 void ControllerNode::PublishCommand()
 {
@@ -202,61 +120,26 @@ void ControllerNode::PublishCommand()
     
     tf::Quaternion quat_from_rpy;
     quat_from_rpy.setRPY((*ref_attitude_thrust)[0], (*ref_attitude_thrust)[1],(*ref_attitude_thrust)[2]);
-    // attitude_target.orientation.x = q.x();
-    // attitude_target.orientation.y = q.y();
-    // attitude_target.orientation.z = q.z();
-    // attitude_target.orientation.w = q.w();
 
     attitude_target.orientation.x = quat_from_rpy.x();
     attitude_target.orientation.y = quat_from_rpy.y();
     attitude_target.orientation.z = quat_from_rpy.z();
     attitude_target.orientation.w = quat_from_rpy.w();
 
-    // attitude_target.orientation.x = attitudetarget_orientation.x();
-    // attitude_target.orientation.y = attitudetarget_orientation.y();
-    // attitude_ta[controller_node.h]============="<<std::endl;
-    
-
-    Eigen::Vector3d euler_angles;
-
-    euler_angles = q.toRotationMatrix().eulerAngles(0,1,2);
-
     attitude_target.body_rate.x = 0;
     attitude_target.body_rate.y = 0;
     attitude_target.body_rate.z = 0;
 
-    // y : Thrust, x : throttle
-    // y = ax^2
-    // x = sqrt(y / a)
-    // 9.8 * 1.5 = a * (0.707)^2
-    // a = 9.8 * 1.5 / 0.707^2
-    double coefficient = 9.8 * 1.5 / pow(thrust_to_throttle_,2);
-    // double throttle = sqrt((*ref_attitude_thrust)[3] / coefficient);
     double throttle = (*ref_attitude_thrust)[3] / mass_ / 9.8 * thrust_to_throttle_; // 2d_platform
     // double throttle = (*ref_attitude_thrust)[3] / 2.30 / 9.8 * 0.66; // gazebo
     
-    if (throttle >= 0.55)
-    {throttle = 0.55;}
-    
-    attitude_target.thrust = throttle;
-    
+    // if (throttle >= 0.57)   {throttle = 0.57;}
+    // attitude_target.thrust = throttle;
 
+    attitude_target.thrust = throttle >= throttle_limit_ ? throttle_limit_ : throttle; 
     // PUBLISH!!!
-    if(set_mass_)
-    {pub_.publish(attitude_target);}
-    
-
-    // pose debug
-    geometry_msgs::PoseStamped posemsg;
-    posemsg.header.frame_id = "map";
-    posemsg.pose.position.z = 1;
-    posemsg.pose.orientation.x = quat_from_rpy.x();
-    posemsg.pose.orientation.y = quat_from_rpy.y();
-    posemsg.pose.orientation.z = quat_from_rpy.z();
-    posemsg.pose.orientation.w = quat_from_rpy.w();
-    // pub_direction_.publish(posemsg);
-
-
+    if(set_mass_)   {pub_.publish(attitude_target);}
+   
     publish_count++;
     if(publish_count > 10)
     {
@@ -276,21 +159,6 @@ void ControllerNode::PublishCommand()
         
     }
 
-    // DEBUG for simulation
-    /*
-    mav_msgs::RollPitchYawrateThrust temp_command;
-    temp_command.thrust.x = 0;
-    temp_command.thrust.y = 0;
-    temp_command.thrust.z = std::max(0.0, (*ref_attitude_thrust)[3]);
-
-    temp_command.roll = (*ref_attitude_thrust)[0];
-    temp_command.pitch = (*ref_attitude_thrust)[1];
-    temp_command.yaw_rate = (*ref_attitude_thrust)[2];
-    temp_command.header.stamp = ros::Time::now();  // TODO(acmarkus): get from msg
-    pub_debug_.publish(temp_command);
-    */
-
-
     visualization_msgs::Marker marker;
     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
     marker.header.frame_id = "/map";
@@ -298,27 +166,14 @@ void ControllerNode::PublishCommand()
 
     marker.pose.orientation.w =1.0;
 
-
-    marker.scale.x = 0.05;
-    marker.scale.y = 0.05;
-    
-    marker.color.g = 1.0f;
-    marker.color.a = 1.0;
+    marker.scale.x = 0.05;  marker.scale.y = 0.05;
+    marker.color.g = 1.0f;  marker.color.a = 1.0;
     marker.type = visualization_msgs::Marker::POINTS;
 
 
     // marker.points.
     controller_->getPredictedState(marker);
     pub_marker_.publish(marker);
-    
-    // pub_debug_.publish(temp_command);
-
-    // std::cout<<"publish command!"<<std::endl;
-    // std::cout<<"orientation.x : "<<attitude_target.orientation.x<<"\n"
-    //          <<"orientation.y : "<<attitude_target.orientation.x<<"\n"
-    //          <<"orientation.z : "<<attitude_target.orientation.x<<"\n"
-    //          <<"orientation.w : "<<attitude_target.orientation.x<<"\n"
-    //          <<"thrust        : "<<attitude_target.thrust<<"\n";
 
 }
 #endif
