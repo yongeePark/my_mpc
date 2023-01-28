@@ -463,9 +463,6 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
     
   }
 
-
-
-
   void ModelPredictiveController::initializeAcadoSolver(Eigen::VectorXd x0)
   {
     for (int i = 0; i < ACADO_N + 1; i++)
@@ -621,8 +618,19 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
     // "yaw_error : "<<yaw_diff * 180 / M_PI<<std::endl<<
     // "yaw_cmd : "<<yaw_cmd * 180 / M_PI<<std::endl;
     // std::cout<<"Current pose : ["<<odometry_.pose.pose.position.x<<", "<<odometry_.pose.pose.position.y<<", "<<odometry_.pose.pose.position.z<<"]"<<std::endl;
-    std::cout<<"Current goal : ["<<position_ref_[0]<<", "<<position_ref_[1]<<", "<<position_ref_[2]<<"]"<<std::endl;
+    // std::cout<<"Current goal : ["<<position_ref_[0]<<", "<<position_ref_[1]<<", "<<position_ref_[2]<<"]"<<std::endl;
     
+    /*
+    for (size_t i = 0; i < ACADO_N; i++) {
+      std::cout<<"goal list : "<<reference_(i,0)<<", "<<reference_(i,1)<<", "<<reference_(i,2)<<std::endl;
+    // reference_.block(i, 0, 1, ACADO_NY) << position_ref_[0], position_ref_[1], position_ref_[2],
+    //                                        velocity_ref_[0], velocity_ref_[1], velocity_ref_[2],
+    //                                        0, 0, 0, 0, 0;
+    }
+
+    std::cout<<"final goal : "<<referenceN_(0,0)<<", "<<referenceN_(0,1)<<", "<<referenceN_(0,2)<<", "<<std::endl;
+    */
+
     counter = 0;
   }
   counter++;
