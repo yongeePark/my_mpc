@@ -56,6 +56,8 @@ void ControllerNode::GoalActionCallback(const std_msgs::Float32MultiArray& goala
 }
 void ControllerNode::GoalCallbackByMission(const std_msgs::Float32MultiArray& msg)
 {
+  // Mission consists of 4 messages.
+  // x, y, z, yaw[deg]
     double goal_x   = msg.data[0];
     double goal_y   = msg.data[1];
     double goal_z   = msg.data[2];

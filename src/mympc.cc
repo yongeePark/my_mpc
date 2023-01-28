@@ -251,8 +251,8 @@ namespace mympc {
     int path_index = 0;
 
     // set reference matrices
-    for (size_t i = 0; i < ACADO_N; i++) {
-      // std::cout<<"current index : "<<trajectory_ref_index_ + 10*i <<std::endl;
+    for (size_t i = 0; i < ACADO_N; i++)
+    {
       if (trajectory_ref_index_ + 10*(i+2) < traj_size)
       {path_index = trajectory_ref_index_ + 10*(i+2);}
       else
@@ -269,13 +269,27 @@ namespace mympc {
       reference_acceleration_x = trajectory_ref_.points.at(path_index).accelerations.at(0).linear.x;
       reference_acceleration_y = trajectory_ref_.points.at(path_index).accelerations.at(0).linear.y;
 
-      
       reference_.block(i, 0, 1, ACADO_NY) << reference_pose_x,reference_pose_y,reference_pose_z,
                                           reference_velocity_x,reference_velocity_y,reference_velocity_z,
                                           -reference_acceleration_y / kGravity, reference_acceleration_x / kGravity,
                                           -reference_acceleration_y / kGravity, reference_acceleration_x / kGravity,
                                           0;
-      }
+      // set yaw direction!
+      // if (i==0)
+      // {
+      //   Eigen::Quaterniond q;
+      //   q.x() = trajectory_ref_.points.at(path_index).transforms.at(0).rotation.x;
+      //   q.y() = trajectory_ref_.points.at(path_index).transforms.at(0).rotation.y;
+      //   q.z() = trajectory_ref_.points.at(path_index).transforms.at(0).rotation.z;
+      //   q.w() = trajectory_ref_.points.at(path_index).transforms.at(0).rotation.w;
+
+      //   yaw_ref_ = std::atan2(2.0 * ( q.w() * q.z() + q.x() * q.y()),
+      //     1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()) );
+      // }
+    }
+
+    // set N reference.
+
       // reference_.block(i, 0, 1, ACADO_NY) << reference_pose_x,reference_pose_y,reference_pose_z,
       //                                       reference_velocity_x,reference_velocity_y,reference_velocity_z,
       //                                       0,0,
@@ -286,6 +300,7 @@ namespace mympc {
       // std::cout<<"x : "<<reference_pose_x<<", y : "<<reference_pose_y<<", z : "<<reference_pose_z<<std::endl;
       // std::cout<<"vx : "<<reference_velocity_x<<", vy : "<<reference_velocity_y<<", vz : "<<reference_velocity_z<<std::endl;
     
+    // set last reference
     if (trajectory_ref_index_ + 10*ACADO_N < traj_size - 1)
     { last_point_index = trajectory_ref_index_ + 10*ACADO_N; }
     else
@@ -301,6 +316,9 @@ namespace mympc {
     referenceN_ << last_pose_x,last_pose_y,last_pose_z,
                     last_velocity_x,last_velocity_y,last_velocity_z;
 
+  
+
+    // set yaw direction!
     int direction_point_index = traj_size -1;
     Eigen::Quaterniond q;
     q.x() = trajectory_ref_.points.at(direction_point_index).transforms.at(0).rotation.x;
@@ -311,34 +329,8 @@ namespace mympc {
     yaw_ref_ = std::atan2(2.0 * ( q.w() * q.z() + q.x() * q.y()),
       1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()) );
 
-    
-  }
-/*
-void rcvWaypointsCallBack(const nav_msgs::Path & wp)
-{   
-    vector<Vector3d> wp_list;
-    wp_list.clear();
-
-    for (int k = 0; k < (int)wp.poses.size(); k++)
-    {
-        Vector3d pt( wp.poses[k].pose.position.x, wp.poses[k].pose.position.y, wp.poses[k].pose.position.z);
-        wp_list.push_back(pt);
-        // ROS_INFO("waypoint%d: (%f, %f, %f)", k+1, pt(0), pt(1), pt(2));
-    }
-
-    MatrixXd waypoints(wp_list.size() + 1, 3);  //add the original point
-    waypoints.row(0) = _startPos;
-
-    for(int k = 0; k < (int)wp_list.size(); k++)
-        waypoints.row(k+1) = wp_list[k];
-
-    //Trajectory generation: use minimum jerk/snap trajectory generation method
-    //waypoints is the result of path planning (Manual in this project)
-    trajGeneration(waypoints);
-}
-
-*/
-
+  }  
+  
 
     // rpy[0] = std::atan2(2.0 * (q.w() * q.x() + q.y() * q.z()),
     //                         1.0 - 2.0 * (q.x() * q.x() + q.y() * q.y()));
@@ -568,16 +560,24 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
   double yaw_diff = k_yaw_ * yaw_error;
 
   if (abs(yaw_diff) > yaw_rate_limit_)
-  {
-      if(yaw_diff > 0 ){yaw_diff = yaw_rate_limit_;}
-      else {yaw_diff = -yaw_rate_limit_;}
-  }
+  { yaw_diff = (yaw_diff > 0) ? yaw_rate_limit_ : -yaw_rate_limit_; }
   double yaw_cmd = yaw_diff + current_yaw_;  // feed-forward yaw_rate cmd
 
   // transfrom based on yaw angle
+  // r  =  | cos  -sin  |          r0
+  // p     | sin   cos  |(yawdiff) p0
+
+
+  // kind of working legacy
+  // double roll_ref_rot, pitch_ref_rot;
+  // roll_ref_rot = cos(yaw_cmd)*roll_ref + sin(yaw_cmd) * pitch_ref;
+  // pitch_ref_rot = -sin(yaw_cmd)*roll_ref + cos(yaw_cmd) * pitch_ref;
+
   double roll_ref_rot, pitch_ref_rot;
-  roll_ref_rot = cos(yaw_cmd)*roll_ref + sin(yaw_cmd) * pitch_ref;
-  pitch_ref_rot = -sin(yaw_cmd)*roll_ref + cos(yaw_cmd) * pitch_ref;
+  roll_ref_rot  = cos(yaw_diff)*roll_ref - sin(yaw_diff) * pitch_ref;
+  pitch_ref_rot = sin(yaw_diff)*roll_ref + cos(yaw_diff) * pitch_ref;
+
+
 
   // *ref_attitude_thrust = Eigen::Vector4d(roll_ref_rot, pitch_ref_rot, yaw_cmd, mass_ * thrust_ref);
   // if (received_trajectory_)
@@ -586,7 +586,8 @@ void rcvWaypointsCallBack(const nav_msgs::Path & wp)
   // }
   // else
   // { *ref_attitude_thrust = Eigen::Vector4d(0,0,0,0); }
-  *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_cmd, mass_ * thrust_ref);
+  // *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_cmd, mass_ * thrust_ref);
+  *ref_attitude_thrust = Eigen::Vector4d(roll_ref_rot, pitch_ref_rot, yaw_cmd, mass_ * thrust_ref);
 
   static int counter = 0;
   if (counter >= 10) {
