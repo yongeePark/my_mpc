@@ -249,12 +249,13 @@ namespace mympc {
 
 
     int path_index = 0;
+    int path_look_ahead = 2;
 
     // set reference matrices
     for (size_t i = 0; i < ACADO_N; i++)
     {
-      if (trajectory_ref_index_ + 10*(i+2) < traj_size)
-      {path_index = trajectory_ref_index_ + 10*(i+2);}
+      if (trajectory_ref_index_ + 10*(i+path_look_ahead) < traj_size)
+      {path_index = trajectory_ref_index_ + 10*(i+path_look_ahead);}
       else
       {path_index = traj_size - 1;}
 
