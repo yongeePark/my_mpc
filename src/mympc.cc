@@ -588,8 +588,16 @@ namespace mympc {
   // else
   // { *ref_attitude_thrust = Eigen::Vector4d(0,0,0,0); }
   // *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_cmd, mass_ * thrust_ref);
-  *ref_attitude_thrust = Eigen::Vector4d(roll_ref_rot, pitch_ref_rot, yaw_cmd, mass_ * thrust_ref);
 
+  //this part is only for real flight!
+  if(received_trajectory_)
+  {
+    *ref_attitude_thrust = Eigen::Vector4d(roll_ref_rot, pitch_ref_rot, yaw_cmd, mass_ * thrust_ref);
+  }
+  else
+  {
+    *ref_attitude_thrust = Eigen::Vector4d(0, 0, 0, 0.1);
+  }
   static int counter = 0;
   if (counter >= 10) {
     std::cout<<"============================================"<<std::endl;

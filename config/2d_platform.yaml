@@ -17,7 +17,7 @@ q_velocity_z : 40
 q_attitude_pos : 40
 q_attitude_vel : 20
 
-r_command : [80, 80, 1]
+r_command : [100, 100, 1]
 
 roll_limit : 10
 pitch_limit : 10
@@ -27,5 +27,5 @@ thrust_max : 30
 
 k_yaw : 0.5
 
-thrust_to_throttle : 0.54
+thrust_to_throttle : 0.520
 throttle_limit : 0.80
