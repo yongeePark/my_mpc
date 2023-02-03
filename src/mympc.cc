@@ -249,7 +249,7 @@ namespace mympc {
 
 
     int path_index = 0;
-    int path_look_ahead = 2;
+    int path_look_ahead = 0;
 
     // set reference matrices
     for (size_t i = 0; i < ACADO_N; i++)
@@ -306,7 +306,7 @@ namespace mympc {
     { last_point_index = trajectory_ref_index_ + 10*ACADO_N; }
     else
     { last_point_index = traj_size-1 ;}
-    last_point_index = traj_size-1 ;
+    // last_point_index = traj_size-1 ;
     last_pose_x = trajectory_ref_.points.at(last_point_index).transforms.at(0).translation.x;
     last_pose_y = trajectory_ref_.points.at(last_point_index).transforms.at(0).translation.y;
     last_pose_z = trajectory_ref_.points.at(last_point_index).transforms.at(0).translation.z;
